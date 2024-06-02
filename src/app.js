@@ -13,6 +13,7 @@ import sessionsRouter from "./routes/sessions.router.js"
 import mailPurchaseRouter from './routes/mailPurchase.router.js'
 import mockingRouter from './routes/mocking.router.js'
 import loggerRouter from './routes/logger.router.js'
+import apiUsersRouter from './routes/apiUsers.router.js'
 
 import socketProducts from './listeners/socketProducts.js';
 import socketChat from './listeners/socketChat.js';
@@ -21,6 +22,7 @@ import session from "express-session"
 import MongoStore from "connect-mongo"
 import swaggerJSDoc from 'swagger-jsdoc'
 import swaggerUiExpress from 'swagger-ui-express'
+import multer from 'multer'
 
 import passport from 'passport'
 import initializePassport from './config/passport.config.js'
@@ -39,6 +41,27 @@ app.use(express.json());
 app.use(errorHandler)
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(`${__dirname}/public`)));
+
+//configuracion upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+      const { type } = req.body;
+      if (type === 'profile') {
+          cb(null, 'src/public/uploads/profiles');
+      } else if (type === 'product') {
+          cb(null, 'src/public/uploads/products');
+      } else if (type === 'document') {
+          cb(null, 'src/public/uploads/documents');
+      } else {
+          cb(null, 'src/public/uploads/other');
+      }
+  },
+  filename: (req, file, cb) => {
+      cb(null, file.originalname);
+  },
+});
+
+const upload = multer({ storage });
 
 // Handlebars configuracion
 app.engine("handlebars", handlebars.engine());
@@ -86,6 +109,7 @@ app.use('/apidocs',swaggerUiExpress.serve, swaggerUiExpress.setup(specs))
 
 app.use("/", viewsRoutes);
 app.use('/', viewsUserRouter);
+app.use('/api/users', upload.array('files', 20), apiUsersRouter); // ruta para cambiar el role del usuario
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/products', routerProducts);
 app.use('/api/carts', routerCarts);
